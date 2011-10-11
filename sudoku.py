@@ -15,7 +15,7 @@ tab = {}
 
 r = range(1,10)
 
-SAT_FNAME = 'proble.minisat'
+SAT_FNAME = 'problem.minisat'
 OUT_FNAME = 'solution.minisat'
 
 def main():
@@ -27,12 +27,12 @@ def main():
 
     #print sudoku
 
-    singleclosures = []
+    inputclosures = []
     for i in r:
         for j in r:
             #print i,j,sudoku[i-1][j-1]
             if sudoku[i-1][j-1] != ' ':
-                singleclosures.append( lookup(i,j,int(sudoku[i-1][j-1])) )
+                inputclosures.append( lookup(i,j,int(sudoku[i-1][j-1])) )
 
     #print len(closures)
     #print closures
@@ -40,13 +40,13 @@ def main():
     fo = file(SAT_FNAME,'w')
     
     fo.write('c sudoku.py © 2011 the9ull^\n')
-    fo.write('p cnf %d %d\n' % (9**3,len(closures)+len(singleclosures)))
+    fo.write('p cnf %d %d\n' % (9**3,len(closures)+len(inputclosures)))
     fo.write('c Sudoku constraints\n')
-    for x,y in closures:
-        fo.write('%d %d 0\n' % (x,y))
+    for closure in closures:
+        fo.write(' '.join(map(str,closure)) + ' 0\n')
 
     fo.write('c Input constraints\n')
-    for x in singleclosures:
+    for x in inputclosures:
         fo.write('%d 0\n' % x)
 
     # reverse lookup
@@ -99,7 +99,7 @@ def main():
         for n in [int(x) for x in lines[1].strip().split() if int(x)>0]:
             (i,j,v) = rev[n]
             sol[i-1][j-1] = str(v)
-            print i,j,v
+            #print i,j,v
 
         # Print sol matrix
         for i in r:
@@ -143,6 +143,7 @@ def sudokucons():
 
     for i in r:
         for j in r:
+            atleast = [] # At least one value per cell
             for v in r:
 
                 
@@ -151,7 +152,9 @@ def sudokucons():
                 #             2. same col
                 #             3. same square
 
-                #print lookup(i,j,v),'(%d %d %d) ->'%(i,j,v)
+                # cell -> -x1 ^ -x2 ^ -x3 ^ ...
+                # That is coded:
+                # -cell v -x1 ^ -cell v -x2 ^ -cell v -x3
 
                 cell = -lookup(i,j,v)
 
@@ -186,11 +189,17 @@ def sudokucons():
                         #print -lookup(ii,jj,v), '(%d %d %d)'%(ii,jj,v)
                         add(cell,-lookup(ii,jj,v))
 
-                #one value
+                #at most one value
                 #print 'one value',
                 for vv in rsub(r,v):
                     #print -lookup(i,j,vv), '(%d %d %d)'%(i,j,vv)
                     add(cell,-lookup(i,j,vv))
+
+                #at least one value
+                atleast.append(lookup(i,j,v))
+
+            assert len(atleast)==9
+            o.append(tuple(atleast))
 
     return o
 
