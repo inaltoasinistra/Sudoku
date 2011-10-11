@@ -15,8 +15,8 @@ tab = {}
 
 r = range(1,10)
 
-SAT_FNAME = 'sudoku.minisat'
-OUT_FNAME = 'sudoku.solution'
+SAT_FNAME = 'proble.minisat'
+OUT_FNAME = 'solution.minisat'
 
 def main():
 
@@ -79,7 +79,41 @@ def main():
         print 'Minisat missed!'
         return
 
-    print 'Ret',call([minisat,'-verb=0',SAT_FNAME,OUT_FNAME])
+    ret = call([minisat,'-verb=0',SAT_FNAME,OUT_FNAME])
+
+    if ret == 10:
+        #SAT
+        lines = file(OUT_FNAME).readlines()
+        if lines[0].strip() != 'SAT':
+            print 'Check %s file please' % OUT_FNAME
+            return
+
+        # Prepare void matrix
+        sol = []
+        for i in r:
+            sol.append([])
+            for j in r:
+                sol[-1].append(' ')
+
+        # Elabote solution
+        for n in [int(x) for x in lines[1].strip().split() if int(x)>0]:
+            (i,j,v) = rev[n]
+            sol[i-1][j-1] = str(v)
+            print i,j,v
+
+        # Print sol matrix
+        for i in r:
+            line = []
+            for j in r:
+                line.append(sol[i-1][j-1])
+            print ''.join(line)
+            
+    elif ret == 20:
+        #UNSAT
+        print 'Did you give me a valid input?'
+    else:
+        print 'Minisat ERROR'
+        return
 
 def readinput():
     data = [tuple(x.strip('\n')) for x in sys.stdin.readlines()]
