@@ -2,7 +2,7 @@
 Sudoku solver 1.0 (11-10-11 — it's not a binary value :O)
 
 Requirements
-============
+===========
 
 *Minisat
 *Python 2
