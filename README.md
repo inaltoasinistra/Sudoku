@@ -4,8 +4,8 @@ Sudoku solver 1.0 (11-10-11 — it's not a binary value :O)
 Requirements
 ============
 
-*Minisat
-*Python 2
+- Minisat
+- Python 2
 
 
 Usage
@@ -25,8 +25,8 @@ See input.sample
 Note
 ====
 
-During execution /problem.minisat/ and /solution.minisat/ files are created; you can find there the SAT equivalent problem and solution.
-At the end of /problem.minisat/ there is a table with the meaning of variables.
+During execution *problem.minisat* and *solution.minisat* files are created; you can find there the SAT equivalent problem and solution.
+At the end of *problem.minisat* there is a table with the meaning of variables.
 
 Happy Cheating ^.^
 
