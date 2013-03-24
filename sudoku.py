@@ -122,6 +122,10 @@ def readinput():
     
 
 def initlookup():
+    '''
+    Create hash table to resolve the associated variable.
+    i,j,k → #n
+    '''
     count = 1
     for i in r:
         for j in r:
