@@ -13,36 +13,45 @@ from subprocess import call
 
 tab = {}
 
-SAT_FNAME = 'problem.minisat'
-OUT_FNAME = 'solution.minisat'
+SAT_FNAME = 'alberi.problem.minisat'
+OUT_FNAME = 'alberi.solution.minisat'
 
 def main():
-    ntrees,surface,aa = readinput()
+    ntrees,surfaces,aa = readinput()
     assert ntrees==1,'Only one tree game is supported'
 
-    r = range(1,len(surface))
+    r = range(1,len(aa)+1)
     #Add the tree layer
-    aa.add('T')
     initlookup(r,aa) # r * r * (aa+1)
-    closures = albericons()
+    closures = albericons(r,aa)
 
-    print surface,aa
+    #print '/',surfaces
 
     #define the input in closure form
     inputclosures = []
-    for i in r:
-        for j in r:
-            for a in r:
-            #print i,j,sudoku[i-1][j-1]
-                inputclosures.append( lookup(i,j,int(sudoku[i-1][j-1])) )
+    for i,l in enumerate(surfaces):
+        for j,area in enumerate(l):
+            #print i+1,j+1,area
+            for a in aa:
+                if area==a:
+                    inputclosures.append( lookup(i+1,j+1,a) )
+                else:
+                    inputclosures.append( -lookup(i+1,j+1,a) )
+                #print i+1,j+1,a,
+                #print inputclosures[-1]
+                    
 
     #print len(closures)
     #print closures
     
     fo = file(SAT_FNAME,'w')
     
-    fo.write('c sudoku.py © 2013 the9ull^\n')
-    fo.write('p cnf %d %d\n' % (9**3,len(closures)+len(inputclosures)))
+    fo.write('c alberi.py © 2013 the9ull^\n')
+    lenr = len(r)
+    #print r
+    #print surfaces
+    #print lenr**2 + 2* lenr**3
+    fo.write('p cnf %d %d\n' % (lenr**2 + 2* lenr**3,len(closures)+len(inputclosures)))
     fo.write('c Sudoku constraints\n')
     for closure in closures:
         fo.write(' '.join(map(str,closure)) + ' 0\n')
@@ -63,7 +72,18 @@ def main():
         #print k,v
         if newline==0:
             fo.write('c ')
-        fo.write('%d [row=%d col=%d value=%d]' % (k,v[0],v[1],v[2]))
+        if len(v)==2:
+            s = ''
+        else:
+            if len(v)==3:
+                s = ' a=%s' % v[2]
+            else:
+                if len(v)==4 and v[3]=='a':
+                    s = ' a=%s ij&ija' % v[2]
+                else:
+                    assert 0,'Tab error'
+
+        fo.write('%d [row=%d col=%d%s]' % (k,v[0],v[1],s))
         if newline==2:
             fo.write('\n')
         else:
@@ -86,29 +106,19 @@ def main():
     if ret == 10:
         #SAT
         lines = file(OUT_FNAME).readlines()
-        if lines[0].strip() != 'SAT':
-            print 'Check %s file please' % OUT_FNAME
-            return
+        
+        assert lines[0]=='SAT\n'
 
-        # Prepare void matrix
-        sol = []
+        truevars = set(filter(lambda x: x>0,map(int,lines[1].split())))
         for i in r:
-            sol.append([])
+            s = []
             for j in r:
-                sol[-1].append(' ')
-
-        # Elabote solution
-        for n in [int(x) for x in lines[1].strip().split() if int(x)>0]:
-            (i,j,v) = rev[n]
-            sol[i-1][j-1] = str(v)
-            #print i,j,v
-
-        # Print sol matrix
-        for i in r:
-            line = []
-            for j in r:
-                line.append(sol[i-1][j-1])
-            print ''.join(line)
+                if lookup(i,j) in truevars:
+                        #s.append('+')
+                    s.append(treeSign(surfaces[i-1][j-1]))
+                else:
+                    s.append(surfaces[i-1][j-1])
+            print ''.join(s)
             
     elif ret == 20:
         #UNSAT
@@ -116,6 +126,16 @@ def main():
     else:
         print 'Minisat ERROR'
         return
+
+def treeSign(c):
+    if c>='a' and c<='z':
+        return chr(ord(c)-ord('a')+ord('A'))
+    if c>='A' and c<='Z':
+        return chr(ord(c)-ord('A')+ord('a'))
+    if c>='1' and c<='9':
+        return chr(ord(c)-ord('1')+ord('a'))
+    return '+'
+    
 
 def readinput():
     data = [tuple(x.split('#')[0].strip(' \n')) for x in sys.stdin.readlines()]
@@ -127,9 +147,10 @@ def readinput():
         aa.update(set(l))
 
     #check: square matrix
+    assert len(aa)==len(data),'Check the input'
     for l in data:
         assert len(l)==len(data)
-    return n,data,aa
+    return n,data,sorted(list(aa))
     
 
 def initlookup(r,aa):
@@ -140,17 +161,22 @@ def initlookup(r,aa):
     count = 1
     for i in r:
         for j in r:
+            tab[(i,j)] = count
+            count+=1
             for a in aa:
                 tab[(i,j,a)] = count
                 count+=1
+                tab[(i,j,a,'a')] = count
+                count+=1
+                
 
     #print tab
 
-lookup = lambda i,j,a :tab[(i,j,a)]
+lookup = lambda *args :tab[tuple(args)]
     
 rsub = lambda r,i: [x for x in r if x!=i]
     
-def albericons():
+def albericons(r,aa):
     '''
     closures format:
       (x1 | ¬x2 | x3) &
@@ -163,77 +189,72 @@ def albericons():
            (-1,2,3)]
     '''
     o = []
-    add = lambda x,y: o.append((x,y))
-
-    
-
-
-    return o
-
-def sudokucons():
-
-    o = []
-    add = lambda x,y: o.append((x,y))
+    add = lambda *args: o.append(tuple(args))
 
     for i in r:
+        # At most one tree for each row
         for j in r:
-            atleast = [] # At least one value per cell
-            for v in r:
+            ij = lookup(i,j)
+            for jj in r:
+                if j!=jj:
+                    add(-ij,-lookup(i,jj))
 
-                
-                # (ij,v) -> there are no other var with the same value v on
-                #             1. same line
-                #             2. same col
-                #             3. same square
+            # Trees can't be too near (checks only diagonals)
+            # NB: with ntree==2 → we must check also horizontal and vertical
+            if i-1 in r and j-1 in r:
+                add(-ij,-lookup(i-1,j-1))
+            if i-1 in r and j+1 in r:
+                add(-ij,-lookup(i-1,j+1))
+            if i+1 in r and j+1 in r:
+                add(-ij,-lookup(i+1,j+1))
+            if i+1 in r and j-1 in r:
+                add(-ij,-lookup(i+1,j-1))
 
-                # cell -> -x1 ^ -x2 ^ -x3 ^ ...
-                # That is coded:
-                # -cell v -x1 ^ -cell v -x2 ^ -cell v -x3
 
-                cell = -lookup(i,j,v)
 
-                #lines
-                #print 'lines',
-                for jj in rsub(r,j):
-                    #print -lookup(i,jj,v), '(%d %d %d)'%(i,jj,v)
-                    add(cell,-lookup(i,jj,v))
+        # At least one tree for each row
+        add(*[lookup(i,x) for x in r])
 
-                #cols
-                #print 'cols',
-                for ii in rsub(r,i):
-                    #print -lookup(ii,j,v), '(%d %d %d)'%(ii,j,v)
-                    add(cell,-lookup(ii,j,v))
+    for j in r:
+        # At most one tree for each column
+        for i in r:
+            ij = lookup(i,j)
+            for ii in r:
+                if i!=ii:
+                    add(-ij,-lookup(ii,j))
+        # At least one tree for each column
+        add(*[lookup(x,j,) for x in r])
 
-                #squares
-                #print 'squares',
-                if i>=1 and i<=3: ir = rsub(range(1,4),i)
-                elif i>=4 and i<=6: ir = rsub(range(4,7),i)
-                elif i>=7 and i<=9: ir = rsub(range(7,10),i)
-                else: assert 0
-                assert len(ir)==2,ir
+    # One tree for each area
+    for a in aa:
+        # At least one tree for each area
 
-                if j>=1 and j<=3: jr = rsub(range(1,4),j)
-                elif j>=4 and j<=6: jr = rsub(range(4,7),j)
-                elif j>=7 and j<=9: jr = rsub(range(7,10),j)
-                else: assert 0
-                assert len(jr)==2,jr
-                
-                for ii in ir:
-                    for jj in jr:
-                        #print -lookup(ii,jj,v), '(%d %d %d)'%(ii,jj,v)
-                        add(cell,-lookup(ii,jj,v))
+        #  Formula:
+        ## h <-> 1 & 2
+        ## (-h | 1) & (-h | 2) & (h | -1 | -2)
+        # |(ija & ij) → |(ijaa)
 
-                #at most one value
-                #print 'one value',
-                for vv in rsub(r,v):
-                    #print -lookup(i,j,vv), '(%d %d %d)'%(i,j,vv)
-                    add(cell,-lookup(i,j,vv))
+        atleast = []
+        for i in r:
+            for j in r:
+                ijaa = lookup(i,j,a,'a')
+                ija = lookup(i,j,a)
+                ij = lookup(i,j)
 
-                #at least one value
-                atleast.append(lookup(i,j,v))
+                atleast.append(ijaa)
+                # Definition of ijaa variables
+                add(-ijaa,ija)
+                add(-ijaa,ij)
+                add(ijaa,-ija,-ij)
 
-            assert len(atleast)==9
-            o.append(tuple(atleast))
+                # At most one tree for each area
+                for ii in r:
+                    for jj in r:
+                        if i!=ii and j!=jj:
+                            add(-ijaa,-lookup(ii,jj,a,'a'))
+        # At least one ijaa variable must be true for each area
+        add(*atleast)
+        
 
     return o
 
