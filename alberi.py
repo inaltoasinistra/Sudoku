@@ -18,13 +18,13 @@ OUT_FNAME = 'alberi.solution.minisat'
 
 def main():
     ntrees,surfaces,aa = readinput()
-    assert ntrees==1,'Only one tree game is supported'
+    #assert ntrees==1,'Only one tree game is supported'
 
     r = range(1,len(aa)+1)
     trees = range(1,ntrees+1)
     #Add the tree layer
-    initlookup(trees,r,aa) # r * r * (aa+1)
-    closures = albericons(r,aa)
+    initlookup(trees,r,aa) # r * r * (aa+1) ... and more and more ...
+    closures = albericons(trees,r,aa)
 
     #print '/',surfaces
 
@@ -52,7 +52,7 @@ def main():
     #print r
     #print surfaces
     #print lenr**2 + 2* lenr**3
-    fo.write('p cnf %d %d\n' % (lenr**2 + 2* lenr**3,len(closures)+len(inputclosures)))
+    fo.write('p cnf %d %d\n' % (ntrees * lenr**2 + lenr**3 + ntrees * lenr**3,len(closures)+len(inputclosures)))
     fo.write('c Sudoku constraints\n')
     for closure in closures:
         fo.write(' '.join(map(str,closure)) + ' 0\n')
@@ -82,8 +82,11 @@ def main():
                 s = ' a=%s' % v[3]
             else:
                 s = ' a=%s tij&ija' % v[3]
-
-        fo.write('%d [tree=%d row=%d col=%d%s]' % (k,v[0],v[1],v[2],s))
+        
+        if v[0]:
+            fo.write('%d [tree=%d row=%d col=%d%s]' % (k,v[0],v[1],v[2],s))
+        else:
+            fo.write('%d [row=%d col=%d%s]' % (k,v[1],v[2],s))
         if newline==2:
             fo.write('\n')
         else:
@@ -113,7 +116,7 @@ def main():
         for i in r:
             s = []
             for j in r:
-                if lookup(1,i,j) in truevars:
+                if lookup_output(trees,i,j) & truevars:
                         #s.append('+')
                     s.append(treeSign(surfaces[i-1][j-1]))
                 else:
@@ -178,10 +181,12 @@ def initlookup(trees,r,aa):
     #print tab
 
 lookup = lambda *args :tab[tuple(args)]
+
+lookup_output = lambda trees, i, j: set([lookup(t,i,j) for t in trees])
     
 rsub = lambda r,i: [x for x in r if x!=i]
     
-def albericons(r,aa):
+def albericons(trees,r,aa):
     '''
     closures format:
       (x1 | ¬x2 | x3) &
@@ -196,70 +201,74 @@ def albericons(r,aa):
     o = []
     add = lambda *args: o.append(tuple(args))
 
-    for i in r:
-        # At most one tree for each row
-        for j in r:
-            ij = lookup(1,i,j)
-            for jj in r:
-                if j!=jj:
-                    add(-ij,-lookup(1,i,jj))
-
-            # Trees can't be too near (checks only diagonals)
-            # NB: with ntree==2 → we must check also horizontal and vertical
-            if i-1 in r and j-1 in r:
-                add(-ij,-lookup(1,i-1,j-1))
-            if i-1 in r and j+1 in r:
-                add(-ij,-lookup(1,i-1,j+1))
-            if i+1 in r and j+1 in r:
-                add(-ij,-lookup(1,i+1,j+1))
-            if i+1 in r and j-1 in r:
-                add(-ij,-lookup(1,i+1,j-1))
-
-
-
-        # At least one tree for each row
-        add(*[lookup(1,i,x) for x in r])
-
-    for j in r:
-        # At most one tree for each column
-        for i in r:
-            ij = lookup(1,i,j)
-            for ii in r:
-                if i!=ii:
-                    add(-ij,-lookup(1,ii,j))
-        # At least one tree for each column
-        add(*[lookup(1,x,j) for x in r])
-
-    # One tree for each area
-    for a in aa:
-        # At least one tree for each area
-
-        #  Formula:
-        ## h <-> 1 & 2
-        ## (-h | 1) & (-h | 2) & (h | -1 | -2)
-        # |(ija & ij) → |(ijaa)
-
-        atleast = []
+    for t in trees:
         for i in r:
             for j in r:
-                ijaa = lookup(1,i,j,a)
-                ija = lookup(0,i,j,a)
-                ij = lookup(1,i,j)
+                ij = lookup(t,i,j)
+                # At most one tree for each row
+                for jj in r:
+                    if j!=jj:
+                        add(-ij,-lookup(t,i,jj))
 
-                atleast.append(ijaa)
-                # Definition of ijaa variables
-                add(-ijaa,ija)
-                add(-ijaa,ij)
-                add(ijaa,-ija,-ij)
+                # Trees can't be too near (checks only diagonals)
+                if i-1 in r and j-1 in r:
+                    add(-ij,-lookup(t,i-1,j-1))
+                if i-1 in r and j+1 in r:
+                    add(-ij,-lookup(t,i-1,j+1))
+                if i+1 in r and j+1 in r:
+                    add(-ij,-lookup(t,i+1,j+1))
+                if i+1 in r and j-1 in r:
+                    add(-ij,-lookup(t,i+1,j-1))
 
-                # At most one tree for each area
+                # Multimensional check: every tree must be far from trees on other dimensions
+                for tt in trees:
+                    if t!=tt:
+                        for ii in xrange(i-1,i+2):
+                            for jj in xrange(j-1,j+2):
+                                if ii in r and jj in r:
+                                    add(-ij,-lookup(tt,ii,jj))
+            # At least one tree for each row
+            add(*[lookup(t,i,x) for x in r])
+
+        for j in r:
+            # At most one tree for each column
+            for i in r:
+                ij = lookup(t,i,j)
                 for ii in r:
-                    for jj in r:
-                        if i!=ii and j!=jj:
-                            add(-ijaa,-lookup(1,ii,jj,a))
-        # At least one ijaa variable must be true for each area
-        add(*atleast)
-        
+                    if i!=ii:
+                        add(-ij,-lookup(t,ii,j))
+            # At least one tree for each column
+            add(*[lookup(t,x,j) for x in r])
+
+        # One tree for each area
+        for a in aa:
+            # At least one tree for each area
+            
+            #  Formula:
+            ## h <-> 1 & 2
+            ## (-h | 1) & (-h | 2) & (h | -1 | -2)
+            # |(ija & ij) → |(ijaa)
+
+            atleast = []
+            for i in r:
+                for j in r:
+                    ijaa = lookup(t,i,j,a)
+                    ija = lookup(0,i,j,a)
+                    ij = lookup(t,i,j)
+
+                    atleast.append(ijaa)
+                    # Definition of ijaa variables
+                    add(-ijaa,ija)
+                    add(-ijaa,ij)
+                    add(ijaa,-ija,-ij)
+
+                    # At most one tree for each area
+                    for ii in r:
+                        for jj in r:
+                            if i!=ii and j!=jj:
+                                add(-ijaa,-lookup(t,ii,jj,a))
+            # At least one ijaa variable must be true for each area
+            add(*atleast)
 
     return o
 
