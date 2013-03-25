@@ -21,8 +21,9 @@ def main():
     assert ntrees==1,'Only one tree game is supported'
 
     r = range(1,len(aa)+1)
+    trees = range(1,ntrees+1)
     #Add the tree layer
-    initlookup(r,aa) # r * r * (aa+1)
+    initlookup(trees,r,aa) # r * r * (aa+1)
     closures = albericons(r,aa)
 
     #print '/',surfaces
@@ -34,9 +35,9 @@ def main():
             #print i+1,j+1,area
             for a in aa:
                 if area==a:
-                    inputclosures.append( lookup(i+1,j+1,a) )
+                    inputclosures.append( lookup(0,i+1,j+1,a) )
                 else:
-                    inputclosures.append( -lookup(i+1,j+1,a) )
+                    inputclosures.append( -lookup(0,i+1,j+1,a) )
                 #print i+1,j+1,a,
                 #print inputclosures[-1]
                     
@@ -72,18 +73,17 @@ def main():
         #print k,v
         if newline==0:
             fo.write('c ')
-        if len(v)==2:
+        if len(v)==3:
+            #tij
             s = ''
         else:
-            if len(v)==3:
-                s = ' a=%s' % v[2]
+            if v[0]==0:
+                #0ija
+                s = ' a=%s' % v[3]
             else:
-                if len(v)==4 and v[3]=='a':
-                    s = ' a=%s ij&ija' % v[2]
-                else:
-                    assert 0,'Tab error'
+                s = ' a=%s tij&ija' % v[3]
 
-        fo.write('%d [row=%d col=%d%s]' % (k,v[0],v[1],s))
+        fo.write('%d [tree=%d row=%d col=%d%s]' % (k,v[0],v[1],v[2],s))
         if newline==2:
             fo.write('\n')
         else:
@@ -113,7 +113,7 @@ def main():
         for i in r:
             s = []
             for j in r:
-                if lookup(i,j) in truevars:
+                if lookup(1,i,j) in truevars:
                         #s.append('+')
                     s.append(treeSign(surfaces[i-1][j-1]))
                 else:
@@ -153,22 +153,27 @@ def readinput():
     return n,data,sorted(list(aa))
     
 
-def initlookup(r,aa):
+def initlookup(trees,r,aa):
     '''
     Create hash table to resolve the associated variable.
-    i,j,a → #n
+    t,i,j   → #n
+    0,i,j,a → #n
+    t,i,j,a → #n
     '''
     count = 1
+    for t in trees:
+        for i in r:
+            for j in r:
+                tab[(t,i,j)] = count
+                count+=1
+                for a in aa:
+                    tab[(t,i,j,a)] = count
+                    count+=1
     for i in r:
         for j in r:
-            tab[(i,j)] = count
-            count+=1
             for a in aa:
-                tab[(i,j,a)] = count
+                tab[(0,i,j,a)] = count
                 count+=1
-                tab[(i,j,a,'a')] = count
-                count+=1
-                
 
     #print tab
 
@@ -194,36 +199,36 @@ def albericons(r,aa):
     for i in r:
         # At most one tree for each row
         for j in r:
-            ij = lookup(i,j)
+            ij = lookup(1,i,j)
             for jj in r:
                 if j!=jj:
-                    add(-ij,-lookup(i,jj))
+                    add(-ij,-lookup(1,i,jj))
 
             # Trees can't be too near (checks only diagonals)
             # NB: with ntree==2 → we must check also horizontal and vertical
             if i-1 in r and j-1 in r:
-                add(-ij,-lookup(i-1,j-1))
+                add(-ij,-lookup(1,i-1,j-1))
             if i-1 in r and j+1 in r:
-                add(-ij,-lookup(i-1,j+1))
+                add(-ij,-lookup(1,i-1,j+1))
             if i+1 in r and j+1 in r:
-                add(-ij,-lookup(i+1,j+1))
+                add(-ij,-lookup(1,i+1,j+1))
             if i+1 in r and j-1 in r:
-                add(-ij,-lookup(i+1,j-1))
+                add(-ij,-lookup(1,i+1,j-1))
 
 
 
         # At least one tree for each row
-        add(*[lookup(i,x) for x in r])
+        add(*[lookup(1,i,x) for x in r])
 
     for j in r:
         # At most one tree for each column
         for i in r:
-            ij = lookup(i,j)
+            ij = lookup(1,i,j)
             for ii in r:
                 if i!=ii:
-                    add(-ij,-lookup(ii,j))
+                    add(-ij,-lookup(1,ii,j))
         # At least one tree for each column
-        add(*[lookup(x,j,) for x in r])
+        add(*[lookup(1,x,j) for x in r])
 
     # One tree for each area
     for a in aa:
@@ -237,9 +242,9 @@ def albericons(r,aa):
         atleast = []
         for i in r:
             for j in r:
-                ijaa = lookup(i,j,a,'a')
-                ija = lookup(i,j,a)
-                ij = lookup(i,j)
+                ijaa = lookup(1,i,j,a)
+                ija = lookup(0,i,j,a)
+                ij = lookup(1,i,j)
 
                 atleast.append(ijaa)
                 # Definition of ijaa variables
@@ -251,7 +256,7 @@ def albericons(r,aa):
                 for ii in r:
                     for jj in r:
                         if i!=ii and j!=jj:
-                            add(-ijaa,-lookup(ii,jj,a,'a'))
+                            add(-ijaa,-lookup(1,ii,jj,a))
         # At least one ijaa variable must be true for each area
         add(*atleast)
         
