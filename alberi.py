@@ -141,7 +141,7 @@ def treeSign(c):
     
 
 def readinput():
-    data = [tuple(x.split('#')[0].strip(' \n')) for x in sys.stdin.readlines()]
+    data = [x for x in [tuple(x.split('#')[0].strip(' \n')) for x in sys.stdin.readlines()] if x]
     assert len(data)>0
     n = int(data[0][0])
     data = data[1:]
@@ -150,7 +150,7 @@ def readinput():
         aa.update(set(l))
 
     #check: square matrix
-    assert len(aa)==len(data),'Check the input'
+    assert len(aa)==len(data),'Check the input [len(aa): %d; len(data): %d]'%(len(aa),len(data))
     for l in data:
         assert len(l)==len(data)
     return n,data,sorted(list(aa))
