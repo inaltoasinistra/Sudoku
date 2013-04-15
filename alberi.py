@@ -53,7 +53,7 @@ def main():
     #print surfaces
     #print lenr**2 + 2* lenr**3
     fo.write('p cnf %d %d\n' % (ntrees * lenr**2 + lenr**3 + ntrees * lenr**3,len(closures)+len(inputclosures)))
-    fo.write('c Sudoku constraints\n')
+    fo.write('c Alberi constraints\n')
     for closure in closures:
         fo.write(' '.join(map(str,closure)) + ' 0\n')
 
