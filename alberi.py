@@ -4,6 +4,8 @@
 import sys
 from subprocess import call
 
+from math import factorial
+
 #1 #n alberi 
 #11222
 #13232
@@ -53,6 +55,7 @@ def main():
     #print surfaces
     #print lenr**2 + 2* lenr**3
     fo.write('p cnf %d %d\n' % (ntrees * lenr**2 + lenr**3 + ntrees * lenr**3,len(closures)+len(inputclosures)))
+    fo.write('c Complexity of the problem (w/o sat): %d\n' % complexity(lenr,ntrees))
     fo.write('c Alberi constraints\n')
     for closure in closures:
         fo.write(' '.join(map(str,closure)) + ' 0\n')
@@ -269,6 +272,10 @@ def albericons(trees,r,aa):
             add(*atleast)
 
     return o
+
+# Computational complexity of the problem
+combinations = lambda n,k: factorial(n) / factorial(k) / factorial(n-k)
+complexity = lambda dimension,ntrees: combinations(dimension**2,dimension*ntrees)
 
 if __name__=="__main__":
     main()
