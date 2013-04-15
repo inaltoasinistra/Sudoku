@@ -135,8 +135,6 @@ def treeSign(c):
         return chr(ord(c)-ord('a')+ord('A'))
     if c>='A' and c<='Z':
         return chr(ord(c)-ord('A')+ord('a'))
-    if c>='1' and c<='9':
-        return chr(ord(c)-ord('1')+ord('a'))
     return '+'
     
 
