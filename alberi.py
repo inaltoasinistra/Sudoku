@@ -153,7 +153,7 @@ def readinput():
     #check: square matrix
     assert len(aa)==len(data),'Check the input [len(aa): %d; len(data): %d]'%(len(aa),len(data))
     for l in data:
-        assert len(l)==len(data)
+        assert len(l)==len(data),'%d %d'%(len(l), len(data))
     return n,data,sorted(list(aa))
     
 
